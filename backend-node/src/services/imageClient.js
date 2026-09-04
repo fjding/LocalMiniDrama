@@ -153,7 +153,7 @@ function getModelFromConfig(config, preferredModel) {
 const DASHSCOPE_MIN_PIXELS = 589824;
 const DASHSCOPE_MAX_PIXELS = 1638400;
 
-// 火山引擎 Doubao-Seedream-4.5 最低像素要求 3,686,400 (1920*1920)
+// 火山引擎 Doubao-Seedream 4.5/5.0 最低像素要求 3,686,400 (1920*1920)
 // 需要自动将低分辨率请求放大到该标准，保持长宽比
 const SEEDREAM_MIN_PIXELS = 3686400;
 
@@ -184,6 +184,15 @@ function fixSeedreamSize(size) {
   }
   
   return `${w}x${h}`;
+}
+
+function getSeedreamCapabilities(modelName) {
+  const model = String(modelName || '').trim().toLowerCase();
+  return {
+    isSeedream5: /seedream[-_]?5[-_]?0|seedream5\.0/.test(model),
+    supportsSequentialControl:
+      /seedream[-_]?5[-_]?0[-_]?lite|seedream5\.0[-_]?lite|seedream[-_]?4[-_]?(5|0)/.test(model),
+  };
 }
 
 /** Agnes Image 2.x 官方常用尺寸（过大如 1440x2560 会导致上游 do_request_failed） */
@@ -1505,6 +1514,7 @@ async function callImageApi(db, log, opts) {
   const isAgnes = isAgnesImageConfig(config, model);
   // doubao-seedream 系列模型（含通过自定义代理使用的场景）：使用 volcengine 图片 API 规范
   const isSeedream = isVolc || /seedream|doubao/i.test(model);
+  const seedreamCapabilities = getSeedreamCapabilities(model);
   // 解析参考图：本地路径/localhost URL → base64，公网 URL → 直接传
   const rawRefs = Array.isArray(reference_image_urls) ? reference_image_urls.filter(Boolean) : [];
   const resolvedRefs = rawRefs.map((r) => resolveImageRef(r, files_base_url, storage_local_path)).filter(Boolean);
@@ -1516,7 +1526,7 @@ async function callImageApi(db, log, opts) {
     });
   }
 
-  // doubao-seedream-4-5+ 要求最低 3686400 像素，不足时等比放大；Agnes 需映射到官方支持尺寸
+  // doubao-seedream-4.5/5.0 要求最低 3686400 像素，不足时等比放大；Agnes 需映射到官方支持尺寸
   let effectiveSize = size;
   if (isSeedream && size) effectiveSize = fixSeedreamSize(size);
   else if (isAgnes && size) effectiveSize = fixAgnesImageSize(size);
@@ -1530,9 +1540,12 @@ async function callImageApi(db, log, opts) {
     ...(quality ? { quality } : {}),
     // volcengine 原生或 doubao-seedream 模型均需关闭水印（默认为 true）
     ...((isVolc || isSeedream) ? { watermark: false } : {}),
-    // 多张参考图时加 negative_prompt，防止模型把参考图拼成左右分割的合图
-    // Doubao/Seedream 原生支持；通用 OpenAI-compat 接口大多也会接受该字段（不支持的会忽略）
-    ...(mergedNegativePrompt ? { negative_prompt: mergedNegativePrompt } : {}),
+    // 方舟当前 ImageGenerations 规范未声明 negative_prompt；官方链路不发送未知字段。
+    // 自定义/OpenAI 兼容中转仍保留该字段，以兼容原有行为。
+    ...(!isVolc && mergedNegativePrompt ? { negative_prompt: mergedNegativePrompt } : {}),
+    ...(isVolc ? { response_format: 'url' } : {}),
+    ...(seedreamCapabilities.isSeedream5 ? { output_format: 'png' } : {}),
+    ...(seedreamCapabilities.supportsSequentialControl ? { sequential_image_generation: 'disabled' } : {}),
     // 参考图字段：volcengine doubao-seedream API 规范使用 image（数组），见官方文档
     ...(resolvedRefs.length > 0 && !isAgnes ? { image: resolvedRefs } : {}),
     // Agnes Image 2.x：参考图放在 extra_body.image
@@ -1918,6 +1931,7 @@ module.exports = {
   refListHasCanonical,
   fixAgnesImageSize,
   isAgnesImageConfig,
+  getSeedreamCapabilities,
   /** 图床 URL 缓存（image_proxy_cache），供 SD2 认证等复用 */
   getProxyCache,
   getProxyCacheValidated,

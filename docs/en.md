@@ -189,7 +189,7 @@ Full version history → **[CHANGELOG](changelog.md)**
 - 🆕 **Agnes AI** — one-click setup for text (`agnes-2.0-flash`), image (`agnes-image-2.1-flash`), and video (`agnes-video-v2.0`) with a single API key
 - 🆕 **Canvas mode enhancements** — script node on canvas, context menu, floating toolbar, in-canvas create/delete, batch episode generation
 - 🆕 **ModelArk private asset library** — configure BytePlus / Volcengine Ark asset groups for Seedance 2.0 character certification (AK/SK or Bearer auth)
-- 🔧 **Configurable image proxy** — `upload_url`, timeout (default 180s), and retry count in `config.yaml`; stale cache URLs auto-reupload
+- 🔧 **Configurable object storage** — Volcengine TOS uploads with expiring signed URLs; stale cache URLs auto-reupload
 - 🔧 **Prompt improvements** · **Storyboard image count limit fix**
 
 **v1.2.7 highlights:**

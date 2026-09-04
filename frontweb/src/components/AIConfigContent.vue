@@ -325,7 +325,7 @@
           <el-select v-model="form.api_protocol" style="width: 100%" placeholder="选择接口规范（自定义厂商必选）" clearable>
             <el-option label="OpenAI 兼容（大多数中转站默认）" value="openai" />
             <el-option label="火山引擎（豆包 Seedream / Seedance）" value="volcengine" />
-            <el-option label="火山即梦 Seedance 全能（方舟多图参考，Seedance 2.0 等）" value="volcengine_omni" />
+            <el-option label="火山即梦 Seedance 全能（方舟多模态参考，Seedance 2.x）" value="volcengine_omni" />
             <el-option label="通义万象 DashScope" value="dashscope" />
             <el-option label="Google Gemini（图片 / Veo 视频）" value="gemini" />
             <el-option label="Sora 中转站（multipart/form-data，seconds+size）" value="sora" />
@@ -356,7 +356,7 @@
                 <div class="ph-body">
                   <b>Endpoint：</b><code>POST /api/v3/images/generations</code><br>
                   <b>Base URL：</b><code>https://ark.cn-beijing.volces.com/api/v3</code><br>
-                  <pre>{ "model": "doubao-seedream-4-5-251128", "prompt": "...", "size": "1024x1024" }</pre>
+                  <pre>{ "model": "doubao-seedream-5-0-pro-260628", "prompt": "...", "size": "2K", "output_format": "png" }</pre>
                 </div>
               </el-collapse-item>
               <el-collapse-item name="dashscope-img">
@@ -433,10 +433,10 @@ input_reference = (图片文件，可选)</pre>
               <el-collapse-item name="volcengine-omni-vid">
                 <template #title><span class="ph-tag ph-tag-vid">视频</span> 火山即梦 Seedance 全能（多图参考）</template>
                 <div class="ph-body">
-                  <b>适用：</b>方舟 Seedance 2.0 等支持多参考图的全能链路；与「全能模式」分镜、<code>@图片1</code>… 提示词配合使用。<br>
+                  <b>适用：</b>方舟 Seedance 2.x 支持多模态参考的全能链路；与「全能模式」分镜、<code>@图片1</code>… 提示词配合使用。<br>
                   <b>Endpoint：</b><code>POST {base}/contents/generations/tasks</code>，轮询 <code>GET {base}/contents/generations/tasks/{taskId}</code><br>
-                  <b>厂商：</b>仍选「火山引擎」，<b>接口规范</b>选本项；模型填控制台接入点（如 <code>doubao-seedance-2-0-260128</code>，以控制台为准）。<br>
-                  <pre>{ "model": "doubao-seedance-2-0-260128",
+                  <b>厂商：</b>仍选「火山引擎」，<b>接口规范</b>选本项；模型填官方模型 ID 或控制台接入点（如 <code>doubao-seedance-2-5-260628</code>，以模型目录为准）。<br>
+                  <pre>{ "model": "doubao-seedance-2-5-260628",
   "task_type": "i2v",
   "content": [
     { "type": "text", "text": "… @图片1 … @图片2 …" },
@@ -917,10 +917,10 @@ input_reference = (图片文件，可选)</pre>
         <div class="one-key-section">
           <div class="one-key-section-title">📋 将自动创建以下配置</div>
           <ul class="one-key-list">
-            <li><b>文本/对话</b>：DeepSeek V3（deepseek-v3-2-251201）— 生成故事剧本</li>
-            <li><b>文本生成图片</b>：即梦 4.5（doubao-seedream-4-5-251128）— 角色/场景/道具图</li>
-            <li><b>分镜图片生成</b>：即梦 4.5（doubao-seedream-4-5-251128）— 支持角色参考图</li>
-            <li><b>视频生成</b>：即梦 Seedance 1.5 Pro — 生成视频片段</li>
+            <li><b>文本/对话</b>：Doubao Seed 2.1 Pro / Turbo — 生成故事剧本</li>
+            <li><b>文本生成图片</b>：Seedream 5.0 Pro — 角色/场景/道具图</li>
+            <li><b>分镜图片生成</b>：Seedream 5.0 Pro — 支持角色参考图</li>
+            <li><b>视频生成</b>：Seedance 2.5 / 2.0 — 多模态参考并生成同步音频</li>
           </ul>
         </div>
         <div class="one-key-section">
@@ -1297,7 +1297,7 @@ const oneKeyAgnesSaving = ref(false)
 const providerConfigs = {
   text: [
     { id: 'openai', name: 'OpenAI', models: ['gpt-4o', 'gpt-4', 'gpt-3.5-turbo'] },
-    { id: 'volcengine', name: '火山引擎', models: ['deepseek-v3-2-251201', 'doubao-1-5-pro-32k-250115', 'kimi-k2-thinking-251104'] },
+    { id: 'volcengine', name: '火山引擎', models: ['doubao-seed-2-1-pro-260628', 'doubao-seed-2-1-turbo-260628', 'doubao-seed-2-0-pro-260215'] },
     // { id: 'chatfire', name: 'Chatfire', models: ['gemini-3-flash-preview', 'claude-sonnet-4-5-20250929', 'doubao-seed-1-8-251228'] },
     { id: 'gemini', name: 'Google Gemini', models: ['gemini-2.5-pro', 'gemini-3-flash-preview'] },
     { id: 'deepseek', name: 'DeepSeek', models: ['deepseek-v4-flash', 'deepseek-v4-pro'] },
@@ -1305,7 +1305,7 @@ const providerConfigs = {
     { id: 'agnes', name: 'Agnes AI', models: ['agnes-2.0-flash'] }
   ],
   image: [
-    { id: 'volcengine', name: '火山引擎', models: ['doubao-seedream-4-5-251128', 'doubao-seedream-4-0-250828'] },
+    { id: 'volcengine', name: '火山引擎', models: ['doubao-seedream-5-0-pro-260628', 'doubao-seedream-5-0-260128', 'doubao-seedream-5-0-lite-260128'] },
     { id: 'kling', name: '可灵 Kling', models: ['kling-image', 'kling-omni-image'] },
     { id: 'nano_banana', name: 'NanoBanana', models: ['nano-banana-2', 'nano-banana-pro', 'nano-banana'] },
     // { id: 'chatfire', name: 'Chatfire', models: ['nano-banana-pro', 'doubao-seedream-4-5-251128', 'qwen-image'] },
@@ -1317,7 +1317,7 @@ const providerConfigs = {
   ],
   storyboard_image: [
     { id: 'dashscope', name: '通义万象', models: ['wan2.6-image', 'qwen-image-edit-plus-2026-01-09', 'qwen-image-edit-plus', 'qwen-image-edit-max'] },
-    { id: 'volcengine', name: '火山引擎', models: ['doubao-seedream-4-5-251128', 'doubao-seedream-4-0-250828'] },
+    { id: 'volcengine', name: '火山引擎', models: ['doubao-seedream-5-0-pro-260628', 'doubao-seedream-5-0-260128', 'doubao-seedream-5-0-lite-260128'] },
     { id: 'kling', name: '可灵 Kling', models: ['kling-image', 'kling-omni-image'] },
     { id: 'nano_banana', name: 'NanoBanana', models: ['nano-banana-2', 'nano-banana-pro', 'nano-banana'] },
     // { id: 'chatfire', name: 'Chatfire', models: ['nano-banana-pro', 'doubao-seedream-4-5-251128', 'qwen-image'] },
@@ -1330,7 +1330,7 @@ const providerConfigs = {
     { id: 'ffir', name: '飞儿API / 可灵 Omni-Video (ffir.cn)', models: ['kling-video-o1', 'kling-v3-omni'] },
     { id: 'kling', name: '可灵 Kling', models: ['kling-omni-video', 'kling-video', 'kling-motion-control'] },
     { id: 'vidu', name: 'Vidu', models: ['viduq2', 'viduq2-pro', 'viduq2-turbo', 'viduq3-pro'] },
-    { id: 'volces', name: '火山引擎', models: ['doubao-seedance-2-0-260128', 'doubao-seedance-2-0-fast-260128', 'doubao-seedance-1-5-pro-251215', 'doubao-seedance-1-0-lite-i2v-250428', 'doubao-seedance-1-0-lite-t2v-250428', 'doubao-seedance-1-0-pro-250528', 'doubao-seedance-1-0-pro-fast-251015'] },
+    { id: 'volces', name: '火山引擎', models: ['doubao-seedance-2-5-260628', 'doubao-seedance-2-0-260528', 'doubao-seedance-2-0-fast-260128', 'doubao-seedance-2-0-260128', 'doubao-seedance-1-5-pro-251215'] },
     // { id: 'chatfire', name: 'Chatfire', models: ['doubao-seedance-1-5-pro-251215', 'doubao-seedance-1-0-lite-i2v-250428', 'doubao-seedance-1-0-lite-t2v-250428', 'doubao-seedance-1-0-pro-250528', 'doubao-seedance-1-0-pro-fast-251015', 'sora-2', 'sora-2-pro'] },
     { id: 'minimax_h3', name: 'MiniMax H3', models: ['MiniMax-H3'] },
     { id: 'minimax', name: 'MiniMax 海螺', models: ['MiniMax-Hailuo-2.3', 'MiniMax-Hailuo-2.3-Fast', 'MiniMax-Hailuo-02'] },
@@ -1688,10 +1688,10 @@ const TONGYI_CONFIGS = [
 
 /** 火山引擎一键配置用 */
 const VOLCENGINE_CONFIGS = [
-  { service_type: 'text', name: '火山引擎 文本', base_url: 'https://ark.cn-beijing.volces.com/api/v3', provider: 'volcengine', model: ['deepseek-v3-2-251201', 'doubao-1-5-pro-32k-250115', 'kimi-k2-thinking-251104'] },
-  { service_type: 'image', name: '火山引擎 即梦 文本生图', base_url: 'https://ark.cn-beijing.volces.com/api/v3', provider: 'volcengine', model: ['doubao-seedream-4-5-251128'] },
-  { service_type: 'storyboard_image', name: '火山引擎 即梦 分镜图', base_url: 'https://ark.cn-beijing.volces.com/api/v3', provider: 'volcengine', model: ['doubao-seedream-4-5-251128'] },
-  { service_type: 'video', name: '火山引擎 即梦 视频', base_url: 'https://ark.cn-beijing.volces.com/api/v3', provider: 'volces', model: ['doubao-seedance-1-5-pro-251215'] }
+  { service_type: 'text', name: '火山引擎 Doubao Seed 2.1', base_url: 'https://ark.cn-beijing.volces.com/api/v3', provider: 'volcengine', model: ['doubao-seed-2-1-pro-260628', 'doubao-seed-2-1-turbo-260628', 'doubao-seed-2-0-pro-260215'] },
+  { service_type: 'image', name: '火山引擎 Seedream 5.0 Pro 文本生图', base_url: 'https://ark.cn-beijing.volces.com/api/v3', provider: 'volcengine', api_protocol: 'volcengine', endpoint: '/images/generations', model: ['doubao-seedream-5-0-pro-260628', 'doubao-seedream-5-0-260128', 'doubao-seedream-5-0-lite-260128'] },
+  { service_type: 'storyboard_image', name: '火山引擎 Seedream 5.0 Pro 分镜图', base_url: 'https://ark.cn-beijing.volces.com/api/v3', provider: 'volcengine', api_protocol: 'volcengine', endpoint: '/images/generations', model: ['doubao-seedream-5-0-pro-260628', 'doubao-seedream-5-0-260128', 'doubao-seedream-5-0-lite-260128'] },
+  { service_type: 'video', name: '火山引擎 Seedance 2.5 全能视频', base_url: 'https://ark.cn-beijing.volces.com/api/v3', provider: 'volces', api_protocol: 'volcengine_omni', endpoint: '/contents/generations/tasks', query_endpoint: '/contents/generations/tasks/{taskId}', settings: JSON.stringify({ generate_audio: true }), model: ['doubao-seedance-2-5-260628', 'doubao-seedance-2-0-260528', 'doubao-seedance-2-0-fast-260128'] }
 ]
 
 /** Agnes 一键配置用 */
@@ -2087,10 +2087,14 @@ async function submitOneKeyVolc() {
         service_type: cfg.service_type,
         name: cfg.name,
         provider: cfg.provider,
+        api_protocol: cfg.api_protocol || '',
         base_url: cfg.base_url,
         api_key: apiKey,
         model: models,
         default_model: models[0] || null,
+        endpoint: cfg.endpoint || '',
+        query_endpoint: cfg.query_endpoint || '',
+        settings: cfg.settings || null,
         priority: 10,
         is_default: true
       })

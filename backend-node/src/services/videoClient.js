@@ -110,6 +110,31 @@ function parseConfigSettingsJson(config) {
   }
 }
 
+function settingToBoolean(value) {
+  if (value === true || value === 1) return true;
+  if (value === false || value === 0) return false;
+  const normalized = String(value == null ? '' : value).trim().toLowerCase();
+  if (['true', '1', 'yes', 'on'].includes(normalized)) return true;
+  if (['false', '0', 'no', 'off'].includes(normalized)) return false;
+  return undefined;
+}
+
+/**
+ * Apply model-specific fields from AI config settings to an official Volcengine video body.
+ * Seedance 2.x supports synchronized audio, but does not support camera_fixed.
+ */
+function applyVolcengineVideoModelOptions(config, body, modelName, { hasReferenceImages = false } = {}) {
+  if (!body || typeof body !== 'object') return body;
+  const isSeedance2 = isSeedance2FamilyModel(modelName);
+  if (isSeedance2 || hasReferenceImages) delete body.camera_fixed;
+  if (isSeedance2) {
+    const settings = parseConfigSettingsJson(config);
+    const generateAudio = settingToBoolean(settings.generate_audio);
+    if (generateAudio !== undefined) body.generate_audio = generateAudio;
+  }
+  return body;
+}
+
 /** SecretKey 是否按 Base64 解码后再参与 HS256（部分控制台给出的 Secret 为 Base64 串） */
 function resolveKlingSecretKeyBase64Flag(cfg) {
   const s = parseConfigSettingsJson(cfg);
@@ -500,9 +525,18 @@ function isSeedance2FamilyModel(modelName) {
   return false;
 }
 
+/** Seedance 2.5 标准模式支持最长 30 秒；需先于通用 2.x 规则判断。 */
+function isSeedance25FamilyModel(modelName) {
+  const m = String(modelName || '').toLowerCase().trim();
+  if (!m) return false;
+  if (/seedance[-_]?2[-_.]?5/.test(m)) return true;
+  return /(^|[-_./])sd2[-_.]?5($|[-_./])/.test(m);
+}
+
 /**
  * 火山 Seedance 系列：按模型版本归一化时长（秒）。
- * - 2.x：4–15
+ * - 2.5：4–30
+ * - 2.0：4–15
  * - 1.5 Pro/Lite：5–12（官方文档）
  * - 1.0 Pro/Lite：仅 5 或 10
  */
@@ -510,6 +544,10 @@ function normalizeVolcengineDuration(modelName, durationNum) {
   const m = String(modelName || '').toLowerCase();
   const d = Number(durationNum);
   const safe = Number.isFinite(d) && d > 0 ? Math.round(d) : 5;
+
+  if (isSeedance25FamilyModel(m)) {
+    return Math.min(30, Math.max(4, safe));
+  }
 
   if (isSeedance2FamilyModel(m)) {
     return Math.min(15, Math.max(4, safe));
@@ -647,6 +685,10 @@ async function callVolcengineOmniVideoApi(config, log, opts) {
       log.info('[VolcOmni] 已注入 Seedance 2.0 音色参考音频', { video_gen_id, voice_ref: String(opts.voice_reference_url).slice(0, 80) });
     }
   }
+
+  applyVolcengineVideoModelOptions(config, body, finalModel, {
+    hasReferenceImages: body.content.some((part) => part && part.role === 'reference_image'),
+  });
 
   // ===== 全能模式（Seedance 2.0 / Omni）最终请求结构体日志 =====
   // 方便调试确认：图片参考 + 音色参考是否真正被加入 content 数组
@@ -2201,8 +2243,14 @@ async function resolveVeo3ImageForApi(rawImgUrl, storage_local_path, log, video_
   const tag = `videoref_${video_gen_id || '0'}`;
   try {
     const host = new URL(raw).hostname.toLowerCase();
-    if (host.includes('imageproxy.zhongzhuan.chat')) {
-      return { kind: 'url', value: raw };
+    try {
+      const { getTosUploadSettings } = require('./tosUploadService');
+      const settings = getTosUploadSettings();
+      if (host === settings.endpoint || host === `${settings.bucket}.${settings.endpoint}`) {
+        return { kind: 'url', value: raw };
+      }
+    } catch (_) {
+      /* TOS 未配置时继续走原有图片解析链路 */
     }
   } catch (_) {
     /* 非绝对 URL */
@@ -2553,7 +2601,7 @@ async function callAgnesVideoApi(db, config, log, opts) {
 
   if (rawRefList.length > 0 && resolvedRefs.length === 0) {
     return {
-      error: 'Agnes 视频参考图须为公网 URL，本地图上传图床失败（imageproxy.zhongzhuan.chat 可能无法访问）。请检查网络/代理，或将 storage.base_url 配置为 Agnes 可访问的公网地址后重试。',
+      error: 'Agnes 视频参考图须为公网 URL，本地图上传火山 TOS 失败。请检查 TOS 凭证、Bucket 权限和网络，或将 storage.base_url 配置为 Agnes 可访问的公网地址后重试。',
     };
   }
 
@@ -3984,6 +4032,10 @@ async function callVideoApi(db, log, opts) {
   if (camera_fixed != null) body.camera_fixed = Boolean(camera_fixed);
   if (volcTaskType) body.task_type = volcTaskType;
 
+  if (isVolc) {
+    applyVolcengineVideoModelOptions(config, body, finalModel, { hasReferenceImages: hasAnyFrame });
+  }
+
   // 按官方要求：first_frame 必须在 last_frame 之前；role 严格区分
   if (firstForApi) {
     const p = { type: 'image_url', image_url: { url: firstForApi } };
@@ -4468,6 +4520,7 @@ module.exports = {
   formatVideoPostBodyForLog,
   isSeedance2FamilyModel,
   normalizeVolcengineDuration,
+  applyVolcengineVideoModelOptions,
   isMinimaxH3Model,
   getMinimaxApiRoot,
   buildMinimaxH3PollUrl,

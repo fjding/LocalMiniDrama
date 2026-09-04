@@ -138,18 +138,21 @@ async function downloadImageToLocal(storagePath, imageUrl, category, log, prefix
   }
 }
 
-function getImageProxyUploadSettings() {
+function getImageProxyUploadSettings(configOverride) {
   try {
-    const cfg = require('../config').loadConfig();
+    const cfg = configOverride || require('../config').loadConfig();
     const ip = cfg?.image_proxy || {};
+    const provider = String(ip.provider || (ip.upload_url ? 'http' : 'disabled')).trim().toLowerCase();
     return {
-      uploadUrl: (ip.upload_url || 'https://imageproxy.zhongzhuan.chat/api/upload').trim(),
+      provider,
+      uploadUrl: String(ip.upload_url || '').trim(),
       timeoutMs: Math.max(5000, Number(ip.upload_timeout_seconds ?? 45) * 1000),
       maxAttempts: Math.max(1, Math.min(5, Number(ip.upload_max_attempts ?? 2))),
     };
   } catch (_) {
     return {
-      uploadUrl: 'https://imageproxy.zhongzhuan.chat/api/upload',
+      provider: 'disabled',
+      uploadUrl: '',
       timeoutMs: 45000,
       maxAttempts: 2,
     };
@@ -157,13 +160,34 @@ function getImageProxyUploadSettings() {
 }
 
 /**
- * 将图片 Buffer 上传到中转图床，返回公开访问 URL。
- * 接口：POST https://imageproxy.zhongzhuan.chat/api/upload  (multipart/form-data, field: file)
- * 响应：{ url: "https://imageproxy.zhongzhuan.chat/api/proxy/image/<hash>", created: ... }
- * 失败自动重试；成功返回 string URL，全部失败返回 null。
+ * 将图片 Buffer 上传到已配置的对象存储，返回临时公网 URL。
+ * 默认支持火山 TOS；仅在显式配置 provider=http 与 upload_url 时保留旧 HTTP 上传协议。
  */
 async function uploadToImageProxy(imageBuffer, mimeType, log, tag) {
-  const { uploadUrl, timeoutMs, maxAttempts } = getImageProxyUploadSettings();
+  const { provider, uploadUrl, timeoutMs, maxAttempts } = getImageProxyUploadSettings();
+  if (provider === 'tos') {
+    const t0 = Date.now();
+    try {
+      const { uploadImageBufferToTos } = require('./tosUploadService');
+      log.info('[TOS上传] ▶ 开始', { tag, size_kb: Math.round(imageBuffer.length / 1024) });
+      const result = await uploadImageBufferToTos(imageBuffer, mimeType);
+      log.info('[TOS上传] ✓ 成功', {
+        tag,
+        bucket: result.bucket,
+        key: result.key,
+        bytes: result.bytes,
+        ms: Date.now() - t0,
+      });
+      return result.url;
+    } catch (error) {
+      log.warn('[TOS上传] 失败', { tag, ms: Date.now() - t0, error: error.message });
+      return null;
+    }
+  }
+  if (provider !== 'http' || !uploadUrl) {
+    log.warn('[图片上传] 未配置可用的对象存储', { tag, provider });
+    return null;
+  }
   const extMap = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif' };
   const ext = extMap[mimeType] || 'jpg';
   const filename = `ref_${Date.now()}.${ext}`;
@@ -252,6 +276,7 @@ async function uploadLocalImageToProxy(storagePath, localPathOrUrl, log, tag) {
 module.exports = {
   uploadFile,
   downloadImageToLocal,
+  getImageProxyUploadSettings,
   uploadToImageProxy,
   uploadLocalImageToProxy,
 };

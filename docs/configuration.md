@@ -198,20 +198,28 @@ API Key：your-api-key
 
 ---
 
-## 图床配置（v1.2.8+）
+## 对象存储配置（v1.2.8+）
 
-部分 AI 接口（如 Gemini 图生、Seedance 2.0 角色认证）需要将本地图片上传到公网图床。可在 `backend-node/configs/config.yaml` 的 `image_proxy` 段配置：
+部分 AI 接口（如 Gemini 图生、Seedance 2.0 角色认证）需要从公网读取本地图片。可在 `backend-node/configs/config.yaml` 中配置火山 TOS：
 
 ```yaml
 image_proxy:
+  provider: tos
   expire_hours: 2              # 缓存有效期（小时）
   use_for_video: true
   upload_timeout_seconds: 180  # 上传超时（秒），默认 180
   upload_max_attempts: 2       # 失败重试次数
-  # upload_url: https://your-proxy.example.com/api/upload
+
+tos:
+  credentials_file: /absolute/path/to/.env.local
+  bucket: your-bucket
+  region: cn-beijing
+  endpoint: tos-cn-beijing.volces.com
+  object_prefix: references/local-mini-drama
+  signed_url_ttl_seconds: 7200
 ```
 
-未配置 `upload_url` 时使用内置默认中转地址。缓存 URL 在使用前会探测是否仍有效，失效则自动重新上传。
+`credentials_file` 内配置 `TOS_ACCESS_KEY` 和 `TOS_SECRET_KEY`，并将文件权限设为 `600`；不要把 AK/SK 写入仓库。项目不再内置第三方中转地址；缓存签名 URL 失效后会自动重新上传。
 
 ---
 

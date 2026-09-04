@@ -5,12 +5,12 @@ app:
   language: zh
 server:
   port: 5679
-  host: 0.0.0.0
+  host: 127.0.0.1
   cors_origins:
     - http://localhost:3012
   read_timeout: 600
   write_timeout: 600
-  insecure_tls: true
+  insecure_tls: false
 database:
   type: sqlite
   path: ./data/drama_generator.db
@@ -40,9 +40,17 @@ vendor_lock:
   enabled: false
   config_file: ai-configs-qudao.json
 image_proxy:
-  expire_hours: 2   # 按图床实际 TTL 调整
+  provider: tos
+  expire_hours: 2   # 与 TOS 签名 URL TTL 保持一致
   use_for_video: true
-  # 图床上传超时（秒），避免网络不通时长时间卡住
+  # TOS 上传超时（秒），避免网络不通时长时间卡住
   upload_timeout_seconds: 180
   upload_max_attempts: 2
-  # upload_url: https://imageproxy.zhongzhuan.chat/api/upload
+tos:
+  # 复用 seedance-manager 的受保护凭证文件；AK/SK 不复制进本仓库。
+  credentials_file: /Users/bytedance/seedance-manager/.env.local
+  bucket: seedance-manager
+  region: cn-beijing
+  endpoint: tos-cn-beijing.volces.com
+  object_prefix: references/local-mini-drama
+  signed_url_ttl_seconds: 7200

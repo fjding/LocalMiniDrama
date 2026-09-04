@@ -335,8 +335,8 @@ style:
 ### 即梦（Seedream）Volcengine 图生图与文生图
 
 - 分镜 **图生图**（`storyboard_image`）与 **文生图**（`image`）中，凡使用 `doubao-seedream-*` 系列模型，均走 `imageClient.js` 的 **Volcengine 图片协议**分支；配置项 **`api_protocol`** 须为 `volcengine`，`base_url`、`endpoint` 需与所用中转站文档一致，勿与纯 OpenAI 兼容条目混用。
-- 中转商界面若标注为「即梦 2.0」等名称，请以对方返回的 **模型 ID** 为准（示例中常见 `doubao-seedream-4-0-250828`、`doubao-seedream-4-5-251128` 等），与 [各大平台中转站示例配置](#各大平台中转站示例配置) 中的 JSON 对照修改即可。
-- **Seedream 4.5+** 对输出像素有下限（约 1920×1920 等效面积）；`imageClient.js` 会在请求前对过小尺寸做等比放大（`fixSeedreamSize`）。若仍报错，请结合中转站错误信息检查模型与尺寸。
+- 中转商界面若只显示产品名，请以方舟或中转商返回的 **模型 ID** 为准；当前方舟模型目录可见 `doubao-seedream-5-0-pro-260628`、`doubao-seedream-5-0-260128`、`doubao-seedream-5-0-lite-260128` 等。
+- **Seedream 4.5/5.0** 对输出像素有下限（约 1920×1920 等效面积）；`imageClient.js` 会在请求前对过小尺寸做等比放大（`fixSeedreamSize`）。方舟链路还会显式使用 URL 响应、关闭水印，并避免发送当前官方规范未声明的 `negative_prompt` 字段。
 
 **图片尺寸：** 系统根据项目 `metadata.aspect_ratio` 自动计算符合服务商最低要求的分辨率（最低 3,686,400 像素）。
 
@@ -360,9 +360,10 @@ style:
 }
 ```
 
-**火山方舟 Seedance 2.0 · 全能 / 多参考图（`volcengine_omni`）：**
+**火山方舟 Seedance 2.x · 全能 / 多模态参考（`volcengine_omni`）：**
 
-- 在前端「AI 配置 → 视频生成」选择接口规范 **`volcengine_omni`**，厂商仍为火山引擎；**Base URL** 一般为 `https://ark.cn-beijing.volces.com/api/v3`；**模型**填控制台接入点（如 `doubao-seedance-2-0-260128`、`doubao-seedance-2-0-fast-260128`）。
+- 在前端「AI 配置 → 视频生成」选择接口规范 **`volcengine_omni`**，厂商仍为火山引擎；**Base URL** 一般为 `https://ark.cn-beijing.volces.com/api/v3`；**模型**填模型 ID 或控制台接入点（当前模型目录可见 `doubao-seedance-2-5-260628`、`doubao-seedance-2-0-260528`、`doubao-seedance-2-0-fast-260128`）。
+- 可在配置 `settings` 中设置 `{ "generate_audio": true }` 启用支持模型的同步音频；Seedance 2.x 请求会自动移除官方暂不支持的 `camera_fixed`。
 - 与制作页分镜 **「全能模式」** 配合：首条为文本提示，其余参考图为场景/角色/道具/分镜主图等，每张 **`role: reference_image`**；方舟侧最多取 **9** 张。
 - **Seedance 2.x** 请求时长会在后端吸附到 **4–15 秒**；默认走 `POST /v1/videos/generations`（可用配置 **Endpoint** 覆盖）。实现见 `videoClient.js`（`volcengine_omni` 分支）。
 

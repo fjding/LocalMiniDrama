@@ -506,7 +506,7 @@ async function processVideoGeneration(db, log, videoGenId) {
         row.task_id,
         'processing',
         5,
-        `正在上传 ${reference_urls.length} 张参考图到图床…`
+        `正在上传 ${reference_urls.length} 张参考图到火山 TOS…`
       );
     }
     const result = await videoClient.callVideoApi(db, log, {

@@ -366,12 +366,12 @@
             <el-option label="21:9 宽银幕" value="21:9" />
           </el-select>
           <el-select v-model="videoClipDuration" style="width: 105px" @change="() => saveProjectSettings(false)">
-            <el-option label="4秒/段" :value="4" />
-            <el-option label="5秒/段" :value="5" />
-            <el-option label="8秒/段" :value="8" />
-            <el-option label="10秒/段" :value="10" />
-            <el-option label="12秒/段" :value="12" />
-            <el-option label="15秒/段" :value="15" />
+            <el-option
+              v-for="duration in VIDEO_CLIP_DURATION_OPTIONS"
+              :key="duration"
+              :label="`${duration}秒/段`"
+              :value="duration"
+            />
           </el-select>
           <el-select v-model="scriptLanguage" placeholder="分镜语言" clearable style="width: 105px">
             <el-option label="中文" value="zh" />
@@ -2666,6 +2666,7 @@ import {
   backfillDramaStylePromptMetadataIfNeeded,
   CUSTOM_STYLE_VALUE,
 } from '@/constants/styleOptions'
+import { VIDEO_CLIP_DURATION_OPTIONS } from '@/constants/videoClipDurations'
 import { useNavigation } from '@/composables/filmCreate/useNavigation'
 import { runGenerateStoryFromPremise } from '@/composables/useStoryGeneration'
 import { useCharacters } from '@/composables/filmCreate/useCharacters'

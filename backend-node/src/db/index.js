@@ -4,6 +4,16 @@ const fs = require('fs');
 
 let db = null;
 
+function restrictDatabaseFilePermissions(dbPath) {
+  for (const filePath of [dbPath, dbPath + '-wal', dbPath + '-shm']) {
+    try {
+      if (fs.existsSync(filePath)) fs.chmodSync(filePath, 0o600);
+    } catch (_) {
+      // Windows and some packaged filesystems may not support POSIX modes.
+    }
+  }
+}
+
 function getDb(config) {
   if (db) return db;
   const dbPath = config.path;
@@ -16,6 +26,7 @@ function getDb(config) {
   });
   db.pragma('journal_mode = WAL');
   db.pragma('busy_timeout = 5000');
+  restrictDatabaseFilePermissions(dbPath);
   return db;
 }
 
